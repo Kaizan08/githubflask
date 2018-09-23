@@ -1,4 +1,6 @@
 import os
+from flask_migrate import Migrate, MigrateCommand
+from github import Github
 
 from flask import Flask
 
@@ -14,17 +16,26 @@ def create_app(config=None):
     else:
         app.config.from_mapping(config)
 
-
     try:
         os.makedirs(app.instance_path)
     except OSError:
         pass
 
+    from . import db
+    migrate = Migrate(app, db)
+
     @app.route('/')
     def index():
-        return 'Titans Win'
+        g = Github(os.getenv('GHUB_USER'), os.getenv('GHUB_PWD'))
+        results = g.search_repositories(query='language:Python',
+                                        sort='stars',
+                                        order='desc')
+        for x in results:
+            print(x.name + ' ' + str(x.stargazers_count))
+        return results
 
-    from githubflask import db
+
+    from . import db
     db.init_app(app)
 
     return app
